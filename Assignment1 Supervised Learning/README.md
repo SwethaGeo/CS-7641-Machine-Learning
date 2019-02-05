@@ -1,4 +1,4 @@
-CS 7641 Assignment 1: Supervised Learning Classification
+# CS 7641 Assignment 1: Supervised Learning Classification<br>
 This project seeks to understand the computatitonal and predictive qualities of five classification algorithms (Neural Network, SVM, kNN, Decision Tree, and Boosted Trees). Each algorithm will be run for two binary classification datasets so that we can compare and contrast them for two different problems (one for a balanced target variable and the other for an unbalanced target variable).
 
 Dataset 1: Phishing Websites - available at https://www.openml.org/d/4534
