@@ -3,7 +3,7 @@ This project seeks to understand the computatitonal and predictive qualities of 
 
 Dataset 1: Phishing Websites - available at https://www.openml.org/d/4534
 
-Dataset 2: Bank Marketing - available at https://www.openml.org/d/1461
+Dataset 2: Census Income - http://archive.ics.uci.edu/ml/datasets/Census+Income
 
 Getting Started & Prerequisites
 For testing on your own machine, you need only to install python 3.6 and the following packages:
