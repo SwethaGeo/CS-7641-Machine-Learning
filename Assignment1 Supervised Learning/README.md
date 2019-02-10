@@ -6,7 +6,7 @@ The classification algorithms are: Decision Tree, kNN, Neural Network, SVM and B
 
 Datasets:
 Breast Cancer Wisconsin (Diagnostic)  -> https://archive.ics.uci.edu/ml/datasets/Breast+Cancer+Wisconsin+(Diagnostic) <br>
-                                                  -> https://archive.ics.uci.edu/ml/machine-learning-databases/breast-cancer-wisconsin/wdbc.data <br>
+                                      -> https://archive.ics.uci.edu/ml/machine-learning-databases/breast-cancer-wisconsin/wdbc.data <br>
 Phishing Websites -> https://www.openml.org/d/4534 <br>
 <br>
 <br>
