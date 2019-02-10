@@ -23,87 +23,6 @@ import timeit
 import itertools
 import matplotlib.pyplot as plt
 
-
-
-# # Loading the datasets
-
-# In[19]:
-
-
-cancer_data = pd.read_csv('breast_cancer.csv')
-print("Data has",len(cancer_data),"rows and", len(cancer_data.columns),"columns.")
-
-
-# In[20]:
-
-
-phishing_data = pd.read_csv('PhishingWebsites.csv')
-print("Data has",len(phishing_data),"rows and", len(phishing_data.columns),"columns.")
-
-
-# # Preprocessing datasets
-
-# This section is preprocessing the breast cancer dataset. Like dropping unnecessary columns and replacing the values of target to 0/1 numeric values.
-
-# In[26]:
-
-
-y_can = cancer_data.diagnosis  # malignant (M) or benign (B)
-# The column "Unnamed: 32" feature includes NaN so drop it from the data. Also drop "id" as it is not a feature and
-# "diagnosis" as it is the label
-column_names = ['Unnamed: 32', 'id', 'diagnosis']
-X_can = cancer_data.drop(column_names, axis=1)
-X_can = preprocessing.scale(X_can)
-
-# Convert string labels to numerical values
-y_can = y_can.values
-y_can[y_can == 'M'] = 1
-y_can[y_can == 'B'] = 0
-y_can = y_can.astype(int)
-column_order = list(cancer_data)
-column_order.insert(0, column_order.pop(column_order.index('diagnosis'))) #move target diagnosis to front
-cancer_data = cancer_data.loc[:, column_order]
-cancer_data.describe(include='all')
-
-
-# For preprocessing the phishing dataset, there are several columns that are categorical with the levels {-1,0,1} and the rest are all binary with levels {-1,1}. For the 3-level columns one-hot encoding was used to create additional features with level {0,1}. Finally, edited the binary features so that the new levels are all {0,1}. There are more features now, but it will all be binary.
-
-# In[28]:
-
-
-column_names = ['URL_Length','having_Sub_Domain','SSLfinal_State','URL_of_Anchor','Links_in_tags','SFH','web_traffic','Links_pointing_to_page']
-data_1hot = phishing_data[column_names]
-data_1hot = pd.get_dummies(data_1hot)
-data_others = phishing_data.drop(column_names,axis=1)
-phishing_data = pd.concat([data_1hot,data_others],axis=1)
-phishing_data = phishing_data.replace(-1,0).astype('category')
-column_order = list(phishing_data)
-column_order.insert(0, column_order.pop(column_order.index('Result')))
-phishing_data = phishing_data.loc[:, column_order]  #move the target variable 'Result' to the front
-phishing_data.describe(include='all')
-
-
-# # Splitting the datasets
-# The datasets are now split into train and test datasets. Training dataset is 70% of the original dataset while test dataset is 30% of the original dataset.
-
-# In[83]:
-
-
-X_can_train, X_can_test, y_can_train, y_can_test = train_test_split(X_can, y_can, test_size=0.3, random_state=18)
-
-X_phish = np.array(phishing_data.values[:,1:],dtype='int64')
-y_phish = np.array(phishing_data.values[:,0],dtype='int64')
-X_ph_train, X_ph_test, y_ph_train, y_ph_test = train_test_split(X_phish, y_phish, test_size=0.3, random_state=18)
-
-
-# In[41]:
-
-
-plt.rcParams['xtick.labelsize'] = 12
-plt.rcParams['ytick.labelsize'] = 12
-plt.rcParams['axes.titlesize'] = 12
-plt.rcParams['font.size'] = 12
-
 def plot_learning_curve(clf, num_fold, X, y, title="Insert Title"):
     n = len(y)
     train_mean = []; train_std = [] #model performance score (f1)
@@ -211,13 +130,6 @@ def final_classifier_evaluation(clf,X_train, X_test, y_train, y_test, title):
     plt.show()
     return fpr_lm, tpr_lm
 
-
-# # Decision Tree Classifier
-# In this section constructed a Decision Tree Classifier using information gain (based on entropy) to determine the best feature split per the ID3 algorithm. The model will be pre-pruned by limiting tree depth using the hyperparameter 'max_depth' and by ensuring that each leaf (a terminal node on the tree) has at least 'min_samples_leaf'.
-
-# In[42]:
-
-
 def DTree_classifier(X_train, y_train, X_test, y_test, title):
     f1_test = []
     f1_train = []
@@ -254,26 +166,6 @@ def TreeGridSearchCV(start_leaf_n, end_leaf_n, X_train, y_train):
     return tree.best_params_['max_depth'], tree.best_params_['min_samples_leaf']
 
 
-# In[43]:
-
-
-DTree_classifier(X_can_train, y_can_train, X_can_test, y_can_test,title="Model Complexity Curve for Decision Tree (Breast Cancer Data)\nHyperparameter : Tree Max Depth")
-start_leaf_n = round(0.005*len(X_can_train))
-end_leaf_n = round(0.05*len(X_can_train)) #leaf nodes of size [0.5%, 5% will be tested]
-max_depth, min_samples_leaf = TreeGridSearchCV(start_leaf_n,end_leaf_n,X_can_train,y_can_train)
-estimator_can = DecisionTreeClassifier(max_depth=max_depth, min_samples_leaf=min_samples_leaf, random_state=100, criterion='entropy')
-train_samp_can, DT_train_score_can, DT_fit_time_can, DT_pred_time_can = plot_learning_curve(estimator_can, 5, X_can_train, y_can_train,title="Decision Tree Breast CancerData")
-DTree_fp_can, DTree_tp_can = final_classifier_evaluation(estimator_can, X_can_train, X_can_test, y_can_train, y_can_test, title="Decision Tree Breast CancerData")
-
-DTree_classifier(X_ph_train, y_ph_train, X_ph_test, y_ph_test,title="Model Complexity Curve for Decision Tree (Phishing Data)\nHyperparameter : Tree Max Depth")
-start_leaf_n = round(0.005*len(X_ph_train))
-end_leaf_n = round(0.05*len(X_ph_train)) #leaf nodes of size [0.5%, 5% will be tested]
-max_depth, min_samples_leaf = TreeGridSearchCV(start_leaf_n,end_leaf_n,X_ph_train,y_ph_train)
-estimator_phish = DecisionTreeClassifier(max_depth=max_depth, min_samples_leaf=min_samples_leaf, random_state=100, criterion='entropy')
-train_samp_phish, DT_train_score_phish, DT_fit_time_phish, DT_pred_time_phish = plot_learning_curve(estimator_phish, 10, X_ph_train, y_ph_train,title="Decision Tree Phishing Data")
-DTree_fp_phish, DTree_tp_phish = final_classifier_evaluation(estimator_phish, X_ph_train, X_ph_test, y_ph_train, y_ph_test, title="Decision Tree Phishing Data")
-
-
 # # k-Nearest Neighbor Classifier
 # In this section constructed a K-nearest neighbors classifier. The hyperparameter will be n_neighbors. There is no distnace metrics and euclidean distance was used for all models. The Model Complexity curve will show F1 score as a function of number of neighbors.
 
@@ -301,20 +193,6 @@ def kNN_classifier(X_train, y_train, X_test, y_test, title):
     plt.legend(loc='best')
     plt.tight_layout()
     plt.show()
-
-
-# In[53]:
-
-
-kNN_classifier(X_can_train, y_can_train, X_can_test, y_can_test,title="Model Complexity Curve for kNN (Breast Cancer Data)\nHyperparameter : No. Neighbors")
-estimator_can = kNN(n_neighbors=14, n_jobs=-1)
-train_samp_can, kNN_train_score_can, kNN_fit_time_can, kNN_pred_time_can = plot_learning_curve(estimator_can, 5, X_can_train, y_can_train,title="kNN Breast Cancer Data")
-KNN_fp_can, KNN_tp_can = final_classifier_evaluation(estimator_can, X_can_train, X_can_test, y_can_train, y_can_test,  title="kNN Breast Cancer Data")
-
-kNN_classifier(X_ph_train, y_ph_train, X_ph_test, y_ph_test,title="Model Complexity Curve for kNN (Phishing Data)\nHyperparameter : No. Neighbors")
-estimator_phish = kNN(n_neighbors=20, n_jobs=-1)
-train_samp_phish, kNN_train_score_phish, kNN_fit_time_phish, kNN_pred_time_phish = plot_learning_curve(estimator_phish,10, X_ph_train, y_ph_train,title="kNN Phishing Data")
-KNN_fp_ph, KNN_tp_ph = final_classifier_evaluation(estimator_phish, X_ph_train, X_ph_test, y_ph_train, y_ph_test, title="kNN Phishing Data")
 
 
 # # Neural Network Classifier
@@ -361,66 +239,6 @@ def NNGridSearchCV(X_train, y_train):
     print("Per Hyperparameter tuning, best parameters are:")
     print(net.best_params_)
     return net.best_params_['hidden_layer_sizes'], net.best_params_['learning_rate_init']
-
-
-# In[57]:
-
-
-hlist = np.linspace(1,150,30).astype('int')
-NN_classifier(X_can_train, y_can_train, X_can_test, y_can_test,title="Model Complexity Curve for NN (Breast Cancer Data)\nHyperparameter : No. Hidden Units")
-h_units, learn_rate = NNGridSearchCV(X_can_train, y_can_train)
-estimator_can = MLPClassifier(hidden_layer_sizes=(h_units,), solver='adam', activation='logistic', 
-                               learning_rate_init=learn_rate, random_state=100)
-train_samp_can, NN_train_score_can, NN_fit_time_can, NN_pred_time_can = plot_learning_curve(estimator_can,5, X_can_train, y_can_train,title="Neural Net Breast Cancer Data")
-NN_fp_can, NN_tp_can = final_classifier_evaluation(estimator_can, X_can_train, X_can_test, y_can_train, y_can_test, title="Neural Net Breast Cancer Data")
-
-
-NN_classifier(X_ph_train, y_ph_train, X_ph_test, y_ph_test,title="Model Complexity Curve for NN (Phishing Data)\nHyperparameter : No. Hidden Units")
-h_units, learn_rate = NNGridSearchCV(X_ph_train, y_ph_train)
-estimator_phish = MLPClassifier(hidden_layer_sizes=(h_units,), solver='adam', activation='logistic', 
-                               learning_rate_init=learn_rate, random_state=100)
-train_samp_phish, NN_train_score_phish, NN_fit_time_phish, NN_pred_time_phish = plot_learning_curve(estimator_phish,10, X_ph_train, y_ph_train,title="Neural Net Phishing Data")
-NN_fp_ph, NN_tp_ph = final_classifier_evaluation(estimator_phish, X_ph_train, X_ph_test, y_ph_train, y_ph_test, title="Neural Net Phishing Data")
-
-
-# In[100]:
-
-
-
-estimator_can = MLPClassifier(hidden_layer_sizes=(30,), solver='adam', activation='logistic', 
-                               learning_rate_init=0.01, random_state=100, max_iter = 200)
-estimator_can.fit(X_can_train, y_can_train)
-loss_values_can = estimator_can.loss_curve_
-estimator_can.fit(X_can_test, y_can_test)
-loss_can_test = estimator_can.loss_curve_
-
-estimator_phish = MLPClassifier(hidden_layer_sizes=(50,), solver='adam', activation='logistic', 
-                               learning_rate_init=0.05, random_state=100, max_iter = 200)
-estimator_phish.fit(X_ph_train, y_ph_train)
-loss_values_ph = estimator_phish.loss_curve_
-estimator_phish.fit(X_ph_test, y_ph_test)
-loss_ph_test = estimator_phish.loss_curve_
-
-
-plt.figure()
-plt.title("Loss Curve for NN")
-plt.xlabel("Number of Iterations")
-plt.ylabel("Loss")
-plt.plot(loss_values_can, 'o-', color="g", label="Train Breast Cancer Data")
-plt.plot(loss_can_test, 'o-', color="r", label="Test Breast Cancer Data")
-plt.legend(loc="best")
-plt.show()
-
-
-
-plt.figure()
-plt.title("Loss Curve for NN")
-plt.xlabel("Number of Iterations")
-plt.ylabel("Loss")
-plt.plot(loss_values_ph, 'o-', color="g", label="Train Phishing Data")
-plt.plot(loss_ph_test, 'o-', color="r", label="Test Phishing Data")
-plt.legend(loc="best")
-plt.show()
 
 
 # # Support Vector Machine Classifier
@@ -510,23 +328,6 @@ def svm_classifier_evaluation(clf,X_train, X_test, y_train, y_test, title):
     plt.show()
     return fpr_lm, tpr_lm
 
-
-# In[85]:
-
-
-SVM_classifier(X_can_train, y_can_train, X_can_test, y_can_test,title="Model Complexity Curve for SVM (Breast Cancer Data)\nHyperparameter : Kernel Function")
-C_val, gamma_val = SVMGridSearchCV(X_can_train, y_can_train)
-estimator_bank = svm.SVC(C=C_val, gamma=gamma_val, kernel='linear', random_state=100)
-train_samp_can, SVM_train_score_can, SVM_fit_time_can, SVM_pred_time_can= plot_learning_curve(estimator_bank,5, X_can_train, y_can_train, title="SVM Breast Cancer Data")
-SVM_fp_can, SVM_tp_can = svm_classifier_evaluation(estimator_bank, X_can_train, X_can_test, y_can_train, y_can_test, title="SVM Breast Cancer Data")
-
-SVM_classifier(X_ph_train, y_ph_train, X_ph_test, y_ph_test,title="Model Complexity Curve for SVM (Phishing Data)\nHyperparameter : Kernel Function")
-C_val, gamma_val = SVMGridSearchCV(X_ph_train, y_ph_train)
-estimator_phish = svm.SVC(C=C_val, gamma=gamma_val, kernel='linear', random_state=100)
-train_samp_phish, SVM_train_score_phish, SVM_fit_time_phish, SVM_pred_time_phish = plot_learning_curve(estimator_phish,10, X_ph_train, y_ph_train,title="SVM Phishing Data")
-SVM_fp_ph, SVM_tp_ph = svm_classifier_evaluation(estimator_phish, X_ph_train, X_ph_test, y_ph_train, y_ph_test, title="SVM Phishing Data")
-
-
 # # Boosting(Adaboost)
 # In this section constructed an Adaboost classifier. Decision stumps were used as weak learners. The hyperparameters are number of estimators and learning rate which will determine the contribution of each tree classifier.
 
@@ -569,30 +370,6 @@ def BoostedGridSearchCV(start_leaf_n, end_leaf_n, X_train, y_train):
     print(boost.best_params_)
     return boost.best_params_['n_estimators'], boost.best_params_['learning_rate']
 
-
-# In[76]:
-
-
-AdaBoost_classifier(X_can_train, y_can_train, X_can_test, y_can_test, 3, 50, title="Model Complexity Curve for Boosted Tree (Breast Cancer Data)\nHyperparameter : No. Estimators")
-start_leaf_n = round(0.005*len(X_can_train))
-end_leaf_n = round(0.05*len(X_can_train)) #leaf nodes of size [0.5%, 5% will be tested]
-n_est, learn_rate = BoostedGridSearchCV(start_leaf_n,end_leaf_n, X_can_train, y_can_train)
-dt_stump = DecisionTreeClassifier(max_depth=1, min_samples_leaf=1)
-estimator_can = AdaBoostClassifier(base_estimator=dt_stump, n_estimators=n_est, random_state=100)
-
-train_samp_can, BT_train_score_can, BT_fit_time_can, BT_pred_time_can = plot_learning_curve(estimator_can, 5, X_can_train, y_can_train,title="Boosted Tree Breast Cancer Data")
-BT_fp_can, BT_tp_can = final_classifier_evaluation(estimator_can, X_can_train, X_can_test, y_can_train, y_can_test, title="Boosted Tree Breast Cancer Data")
-
-
-AdaBoost_classifier(X_ph_train, y_ph_train, X_ph_test, y_ph_test, 3, 50, title="Model Complexity Curve for Boosted Tree (Phishing Data)\nHyperparameter : No. Estimators")
-start_leaf_n = round(0.005*len(X_ph_train))
-end_leaf_n = round(0.05*len(X_ph_train)) #leaf nodes of size [0.5%, 5% will be tested]
-n_est, learn_rate = BoostedGridSearchCV(start_leaf_n,end_leaf_n,X_ph_train,y_ph_train)
-dt_stump = DecisionTreeClassifier(max_depth=1, min_samples_leaf=1)
-estimator_phish = AdaBoostClassifier(base_estimator=dt_stump, n_estimators=n_est, random_state=100)
-
-train_samp_phish, BT_train_score_phish, BT_fit_time_phish, BT_pred_time_phish = plot_learning_curve(estimator_phish, 10, X_ph_train, y_ph_train,title="Boosted Tree Phishing Data")
-BT_fp_phish, BT_tp_phish = final_classifier_evaluation(estimator_phish, X_ph_train, X_ph_test, y_ph_train, y_ph_test, title="Boosted Tree Phishing Data")
 
 
 # # Compare the classifiers
@@ -646,56 +423,245 @@ def compare_roc(NN_fp, NN_tp, SVM_fp, SVM_tp, kNN_fp, kNN_tp, DT_fp, DT_tp, BT_f
 
 # In[101]:
 
+def main():
+# # Loading the datasets
 
-compare_fit_time(train_samp_can, NN_fit_time_can, SVM_fit_time_can, kNN_fit_time_can, 
-                 DT_fit_time_can, BT_fit_time_can, 'Breast Cancer Dataset')              
-compare_pred_time(train_samp_can, NN_pred_time_can, SVM_pred_time_can, kNN_pred_time_can, 
-                 DT_pred_time_can, BT_pred_time_can, 'Breast Cancer Dataset')  
-compare_roc(NN_fp_can, NN_tp_can, SVM_fp_can, SVM_tp_can, KNN_fp_can, KNN_tp_can, 
-            DTree_fp_can, DTree_tp_can, BT_fp_can, BT_tp_can, 'Breast Cancer Dataset')
+    cancer_data = pd.read_csv('breast_cancer.csv')
+    print("Data has",len(cancer_data),"rows and", len(cancer_data.columns),"columns.")
+    
+    
+    phishing_data = pd.read_csv('PhishingWebsites.csv')
+    print("Data has",len(phishing_data),"rows and", len(phishing_data.columns),"columns.")
+    
+# # Preprocessing datasets
+
+# This section is preprocessing the breast cancer dataset. Like dropping unnecessary columns and replacing the values of target to 0/1 numeric values.
+
+# In[26]:
+    
+    
+    y_can = cancer_data.diagnosis  # malignant (M) or benign (B)
+    # The column "Unnamed: 32" feature includes NaN so drop it from the data. Also drop "id" as it is not a feature and
+    # "diagnosis" as it is the label
+    column_names = ['Unnamed: 32', 'id', 'diagnosis']
+    X_can = cancer_data.drop(column_names, axis=1)
+    X_can = preprocessing.scale(X_can)
+    
+    # Convert string labels to numerical values
+    y_can = y_can.values
+    y_can[y_can == 'M'] = 1
+    y_can[y_can == 'B'] = 0
+    y_can = y_can.astype(int)
+    column_order = list(cancer_data)
+    column_order.insert(0, column_order.pop(column_order.index('diagnosis'))) #move target diagnosis to front
+    cancer_data = cancer_data.loc[:, column_order]
+    cancer_data.describe(include='all')
+    
+    
+    # For preprocessing the phishing dataset, there are several columns that are categorical with the levels {-1,0,1} and the rest are all binary with levels {-1,1}. For the 3-level columns one-hot encoding was used to create additional features with level {0,1}. Finally, edited the binary features so that the new levels are all {0,1}. There are more features now, but it will all be binary.
+    
+    # In[28]:
+    
+    
+    column_names = ['URL_Length','having_Sub_Domain','SSLfinal_State','URL_of_Anchor','Links_in_tags','SFH','web_traffic','Links_pointing_to_page']
+    data_1hot = phishing_data[column_names]
+    data_1hot = pd.get_dummies(data_1hot)
+    data_others = phishing_data.drop(column_names,axis=1)
+    phishing_data = pd.concat([data_1hot,data_others],axis=1)
+    phishing_data = phishing_data.replace(-1,0).astype('category')
+    column_order = list(phishing_data)
+    column_order.insert(0, column_order.pop(column_order.index('Result')))
+    phishing_data = phishing_data.loc[:, column_order]  #move the target variable 'Result' to the front
+    phishing_data.describe(include='all')
+    
+    
+    # # Splitting the datasets
+    # The datasets are now split into train and test datasets. Training dataset is 70% of the original dataset while test dataset is 30% of the original dataset.
+    
+    # In[83]:
+    
+    
+    X_can_train, X_can_test, y_can_train, y_can_test = train_test_split(X_can, y_can, test_size=0.3, random_state=18)
+    
+    X_phish = np.array(phishing_data.values[:,1:],dtype='int64')
+    y_phish = np.array(phishing_data.values[:,0],dtype='int64')
+    X_ph_train, X_ph_test, y_ph_train, y_ph_test = train_test_split(X_phish, y_phish, test_size=0.3, random_state=18)
+    
+    
+    # In[41]:
+    
+    
+    plt.rcParams['xtick.labelsize'] = 12
+    plt.rcParams['ytick.labelsize'] = 12
+    plt.rcParams['axes.titlesize'] = 12
+    plt.rcParams['font.size'] = 12
+    
+# # Decision Tree Classifier
+# In this section constructed a Decision Tree Classifier using information gain (based on entropy) to determine the best feature split per the ID3 algorithm. The model will be pre-pruned by limiting tree depth using the hyperparameter 'max_depth' and by ensuring that each leaf (a terminal node on the tree) has at least 'min_samples_leaf'.
+    DTree_classifier(X_can_train, y_can_train, X_can_test, y_can_test,title="Model Complexity Curve for Decision Tree (Breast Cancer Data)\nHyperparameter : Tree Max Depth")
+    start_leaf_n = round(0.005*len(X_can_train))
+    end_leaf_n = round(0.05*len(X_can_train)) #leaf nodes of size [0.5%, 5% will be tested]
+    max_depth, min_samples_leaf = TreeGridSearchCV(start_leaf_n,end_leaf_n,X_can_train,y_can_train)
+    estimator_can = DecisionTreeClassifier(max_depth=max_depth, min_samples_leaf=min_samples_leaf, random_state=100, criterion='entropy')
+    train_samp_can, DT_train_score_can, DT_fit_time_can, DT_pred_time_can = plot_learning_curve(estimator_can, 5, X_can_train, y_can_train,title="Decision Tree Breast CancerData")
+    DTree_fp_can, DTree_tp_can = final_classifier_evaluation(estimator_can, X_can_train, X_can_test, y_can_train, y_can_test, title="Decision Tree Breast CancerData")
+    
+    DTree_classifier(X_ph_train, y_ph_train, X_ph_test, y_ph_test,title="Model Complexity Curve for Decision Tree (Phishing Data)\nHyperparameter : Tree Max Depth")
+    start_leaf_n = round(0.005*len(X_ph_train))
+    end_leaf_n = round(0.05*len(X_ph_train)) #leaf nodes of size [0.5%, 5% will be tested]
+    max_depth, min_samples_leaf = TreeGridSearchCV(start_leaf_n,end_leaf_n,X_ph_train,y_ph_train)
+    estimator_phish = DecisionTreeClassifier(max_depth=max_depth, min_samples_leaf=min_samples_leaf, random_state=100, criterion='entropy')
+    train_samp_phish, DT_train_score_phish, DT_fit_time_phish, DT_pred_time_phish = plot_learning_curve(estimator_phish, 10, X_ph_train, y_ph_train,title="Decision Tree Phishing Data")
+    DTree_fp_phish, DTree_tp_phish = final_classifier_evaluation(estimator_phish, X_ph_train, X_ph_test, y_ph_train, y_ph_test, title="Decision Tree Phishing Data")
+    
+    
+    kNN_classifier(X_can_train, y_can_train, X_can_test, y_can_test,title="Model Complexity Curve for kNN (Breast Cancer Data)\nHyperparameter : No. Neighbors")
+    estimator_can = kNN(n_neighbors=14, n_jobs=-1)
+    train_samp_can, kNN_train_score_can, kNN_fit_time_can, kNN_pred_time_can = plot_learning_curve(estimator_can, 5, X_can_train, y_can_train,title="kNN Breast Cancer Data")
+    KNN_fp_can, KNN_tp_can = final_classifier_evaluation(estimator_can, X_can_train, X_can_test, y_can_train, y_can_test,  title="kNN Breast Cancer Data")
+    
+    kNN_classifier(X_ph_train, y_ph_train, X_ph_test, y_ph_test,title="Model Complexity Curve for kNN (Phishing Data)\nHyperparameter : No. Neighbors")
+    estimator_phish = kNN(n_neighbors=20, n_jobs=-1)
+    train_samp_phish, kNN_train_score_phish, kNN_fit_time_phish, kNN_pred_time_phish = plot_learning_curve(estimator_phish,10, X_ph_train, y_ph_train,title="kNN Phishing Data")
+    KNN_fp_ph, KNN_tp_ph = final_classifier_evaluation(estimator_phish, X_ph_train, X_ph_test, y_ph_train, y_ph_test, title="kNN Phishing Data")
+    
+    
+    hlist = np.linspace(1,150,30).astype('int')
+    NN_classifier(X_can_train, y_can_train, X_can_test, y_can_test,title="Model Complexity Curve for NN (Breast Cancer Data)\nHyperparameter : No. Hidden Units")
+    h_units, learn_rate = NNGridSearchCV(X_can_train, y_can_train)
+    estimator_can = MLPClassifier(hidden_layer_sizes=(h_units,), solver='adam', activation='logistic', 
+                                learning_rate_init=learn_rate, random_state=100)
+    train_samp_can, NN_train_score_can, NN_fit_time_can, NN_pred_time_can = plot_learning_curve(estimator_can,5, X_can_train, y_can_train,title="Neural Net Breast Cancer Data")
+    NN_fp_can, NN_tp_can = final_classifier_evaluation(estimator_can, X_can_train, X_can_test, y_can_train, y_can_test, title="Neural Net Breast Cancer Data")
+    
+    
+    NN_classifier(X_ph_train, y_ph_train, X_ph_test, y_ph_test,title="Model Complexity Curve for NN (Phishing Data)\nHyperparameter : No. Hidden Units")
+    h_units, learn_rate = NNGridSearchCV(X_ph_train, y_ph_train)
+    estimator_phish = MLPClassifier(hidden_layer_sizes=(h_units,), solver='adam', activation='logistic', 
+                                learning_rate_init=learn_rate, random_state=100)
+    train_samp_phish, NN_train_score_phish, NN_fit_time_phish, NN_pred_time_phish = plot_learning_curve(estimator_phish,10, X_ph_train, y_ph_train,title="Neural Net Phishing Data")
+    NN_fp_ph, NN_tp_ph = final_classifier_evaluation(estimator_phish, X_ph_train, X_ph_test, y_ph_train, y_ph_test, title="Neural Net Phishing Data")
+    
+    estimator_can = MLPClassifier(hidden_layer_sizes=(30,), solver='adam', activation='logistic', 
+                                learning_rate_init=0.01, random_state=100, max_iter = 200)
+    estimator_can.fit(X_can_train, y_can_train)
+    loss_values_can = estimator_can.loss_curve_
+    estimator_can.fit(X_can_test, y_can_test)
+    loss_can_test = estimator_can.loss_curve_
+    
+    estimator_phish = MLPClassifier(hidden_layer_sizes=(50,), solver='adam', activation='logistic', 
+                                learning_rate_init=0.05, random_state=100, max_iter = 200)
+    estimator_phish.fit(X_ph_train, y_ph_train)
+    loss_values_ph = estimator_phish.loss_curve_
+    estimator_phish.fit(X_ph_test, y_ph_test)
+    loss_ph_test = estimator_phish.loss_curve_
+    
+    
+    plt.figure()
+    plt.title("Loss Curve for NN")
+    plt.xlabel("Number of Iterations")
+    plt.ylabel("Loss")
+    plt.plot(loss_values_can, 'o-', color="g", label="Train Breast Cancer Data")
+    plt.plot(loss_can_test, 'o-', color="r", label="Test Breast Cancer Data")
+    plt.legend(loc="best")
+    plt.show()
+    
+    
+    
+    plt.figure()
+    plt.title("Loss Curve for NN")
+    plt.xlabel("Number of Iterations")
+    plt.ylabel("Loss")
+    plt.plot(loss_values_ph, 'o-', color="g", label="Train Phishing Data")
+    plt.plot(loss_ph_test, 'o-', color="r", label="Test Phishing Data")
+    plt.legend(loc="best")
+    plt.show()
+    
+    SVM_classifier(X_can_train, y_can_train, X_can_test, y_can_test,title="Model Complexity Curve for SVM (Breast Cancer Data)\nHyperparameter : Kernel Function")
+    C_val, gamma_val = SVMGridSearchCV(X_can_train, y_can_train)
+    estimator_bank = svm.SVC(C=C_val, gamma=gamma_val, kernel='linear', random_state=100)
+    train_samp_can, SVM_train_score_can, SVM_fit_time_can, SVM_pred_time_can= plot_learning_curve(estimator_bank,5, X_can_train, y_can_train, title="SVM Breast Cancer Data")
+    SVM_fp_can, SVM_tp_can = svm_classifier_evaluation(estimator_bank, X_can_train, X_can_test, y_can_train, y_can_test, title="SVM Breast Cancer Data")
+    
+    SVM_classifier(X_ph_train, y_ph_train, X_ph_test, y_ph_test,title="Model Complexity Curve for SVM (Phishing Data)\nHyperparameter : Kernel Function")
+    C_val, gamma_val = SVMGridSearchCV(X_ph_train, y_ph_train)
+    estimator_phish = svm.SVC(C=C_val, gamma=gamma_val, kernel='linear', random_state=100)
+    train_samp_phish, SVM_train_score_phish, SVM_fit_time_phish, SVM_pred_time_phish = plot_learning_curve(estimator_phish,10, X_ph_train, y_ph_train,title="SVM Phishing Data")
+    SVM_fp_ph, SVM_tp_ph = svm_classifier_evaluation(estimator_phish, X_ph_train, X_ph_test, y_ph_train, y_ph_test, title="SVM Phishing Data")
+    
+    AdaBoost_classifier(X_can_train, y_can_train, X_can_test, y_can_test, 3, 50, title="Model Complexity Curve for Boosted Tree (Breast Cancer Data)\nHyperparameter : No. Estimators")
+    start_leaf_n = round(0.005*len(X_can_train))
+    end_leaf_n = round(0.05*len(X_can_train)) #leaf nodes of size [0.5%, 5% will be tested]
+    n_est, learn_rate = BoostedGridSearchCV(start_leaf_n,end_leaf_n, X_can_train, y_can_train)
+    dt_stump = DecisionTreeClassifier(max_depth=1, min_samples_leaf=1)
+    estimator_can = AdaBoostClassifier(base_estimator=dt_stump, n_estimators=n_est, random_state=100)
+    
+    train_samp_can, BT_train_score_can, BT_fit_time_can, BT_pred_time_can = plot_learning_curve(estimator_can, 5, X_can_train, y_can_train,title="Boosted Tree Breast Cancer Data")
+    BT_fp_can, BT_tp_can = final_classifier_evaluation(estimator_can, X_can_train, X_can_test, y_can_train, y_can_test, title="Boosted Tree Breast Cancer Data")
+    
+    
+    AdaBoost_classifier(X_ph_train, y_ph_train, X_ph_test, y_ph_test, 3, 50, title="Model Complexity Curve for Boosted Tree (Phishing Data)\nHyperparameter : No. Estimators")
+    start_leaf_n = round(0.005*len(X_ph_train))
+    end_leaf_n = round(0.05*len(X_ph_train)) #leaf nodes of size [0.5%, 5% will be tested]
+    n_est, learn_rate = BoostedGridSearchCV(start_leaf_n,end_leaf_n,X_ph_train,y_ph_train)
+    dt_stump = DecisionTreeClassifier(max_depth=1, min_samples_leaf=1)
+    estimator_phish = AdaBoostClassifier(base_estimator=dt_stump, n_estimators=n_est, random_state=100)
+    
+    train_samp_phish, BT_train_score_phish, BT_fit_time_phish, BT_pred_time_phish = plot_learning_curve(estimator_phish, 10, X_ph_train, y_ph_train,title="Boosted Tree Phishing Data")
+    BT_fp_phish, BT_tp_phish = final_classifier_evaluation(estimator_phish, X_ph_train, X_ph_test, y_ph_train, y_ph_test, title="Boosted Tree Phishing Data")
 
 
-compare_fit_time(train_samp_phish, NN_fit_time_phish, SVM_fit_time_phish, kNN_fit_time_phish, 
-                 DT_fit_time_phish, BT_fit_time_phish, 'Phishing Dataset')              
-compare_pred_time(train_samp_phish, NN_pred_time_phish, SVM_pred_time_phish, kNN_pred_time_phish, 
-                 DT_pred_time_phish, BT_pred_time_phish, 'Phishing Dataset')  
-compare_roc(NN_fp_ph, NN_tp_ph, SVM_fp_ph, SVM_tp_ph, KNN_fp_ph, KNN_tp_ph, 
-            DTree_fp_phish, DTree_tp_phish, BT_fp_phish, BT_tp_phish, 'Phishing Dataset')
-
-
-# In[103]:
-
-
-classifiers = ('Decision tree', 'kNN', 'Neural network', 'SVM', 'AdaBoost')
-y_pos = np.arange(len(classifiers))
-f1_score_ph=(0.92, 0.93, 0.95, 0.93,0.93 )
-f1_score_can=(0.95, 0.91, 0.98,0.97, 0.96 )
-
-
-# In[106]:
-
-
-plt.figure()
-plt.barh(y_pos, f1_score_ph)
-plt.gca().set_yticks(y_pos)
-plt.gca().set_xlim(0.9, 1.0)
-plt.gca().set_yticklabels(classifiers)
-plt.gca().invert_yaxis()  # labels read top-to-bottom
-plt.title('F1 score: Phishing Dataset')
-plt.xlabel('F1 score')
-plt.show()
-
-
-# In[107]:
-
-
-plt.figure()
-plt.barh(y_pos, f1_score_can)
-plt.gca().set_yticks(y_pos)
-plt.gca().set_xlim(0.9, 1.0)
-plt.gca().set_yticklabels(classifiers)
-plt.gca().invert_yaxis()  # labels read top-to-bottom
-plt.title('F1 score: Breast Cancer Dataset')
-plt.xlabel('F1 score')
-plt.show()
-
+    compare_fit_time(train_samp_can, NN_fit_time_can, SVM_fit_time_can, kNN_fit_time_can, 
+                    DT_fit_time_can, BT_fit_time_can, 'Breast Cancer Dataset')              
+    compare_pred_time(train_samp_can, NN_pred_time_can, SVM_pred_time_can, kNN_pred_time_can, 
+                    DT_pred_time_can, BT_pred_time_can, 'Breast Cancer Dataset')  
+    compare_roc(NN_fp_can, NN_tp_can, SVM_fp_can, SVM_tp_can, KNN_fp_can, KNN_tp_can, 
+                DTree_fp_can, DTree_tp_can, BT_fp_can, BT_tp_can, 'Breast Cancer Dataset')
+    
+    
+    compare_fit_time(train_samp_phish, NN_fit_time_phish, SVM_fit_time_phish, kNN_fit_time_phish, 
+                    DT_fit_time_phish, BT_fit_time_phish, 'Phishing Dataset')              
+    compare_pred_time(train_samp_phish, NN_pred_time_phish, SVM_pred_time_phish, kNN_pred_time_phish, 
+                    DT_pred_time_phish, BT_pred_time_phish, 'Phishing Dataset')  
+    compare_roc(NN_fp_ph, NN_tp_ph, SVM_fp_ph, SVM_tp_ph, KNN_fp_ph, KNN_tp_ph, 
+                DTree_fp_phish, DTree_tp_phish, BT_fp_phish, BT_tp_phish, 'Phishing Dataset')
+    
+    
+    # In[103]:
+    
+    
+    classifiers = ('Decision tree', 'kNN', 'Neural network', 'SVM', 'AdaBoost')
+    y_pos = np.arange(len(classifiers))
+    f1_score_ph=(0.92, 0.93, 0.95, 0.93,0.93 )
+    f1_score_can=(0.95, 0.91, 0.98,0.97, 0.96 )
+    
+    
+    # In[106]:
+    
+    
+    plt.figure()
+    plt.barh(y_pos, f1_score_ph)
+    plt.gca().set_yticks(y_pos)
+    plt.gca().set_xlim(0.9, 1.0)
+    plt.gca().set_yticklabels(classifiers)
+    plt.gca().invert_yaxis()  # labels read top-to-bottom
+    plt.title('F1 score: Phishing Dataset')
+    plt.xlabel('F1 score')
+    plt.show()
+    
+    
+    # In[107]:
+    
+    
+    plt.figure()
+    plt.barh(y_pos, f1_score_can)
+    plt.gca().set_yticks(y_pos)
+    plt.gca().set_xlim(0.9, 1.0)
+    plt.gca().set_yticklabels(classifiers)
+    plt.gca().invert_yaxis()  # labels read top-to-bottom
+    plt.title('F1 score: Breast Cancer Dataset')
+    plt.xlabel('F1 score')
+    plt.show()
+    
+if __name__ == "__main__":
+    main()
