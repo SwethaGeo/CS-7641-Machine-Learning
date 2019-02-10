@@ -1,17 +1,20 @@
 # CS 7641 Assignment 1: Supervised Learning Classification<br>
-This project seeks to understand the computatitonal and predictive qualities of five classification algorithms (Neural Network, SVM, kNN, Decision Tree, and Boosted Trees). Each algorithm will be run for two binary classification datasets so that we can compare and contrast them for two different problems (one for a balanced target variable and the other for an unbalanced target variable).
 
-Dataset 1: Phishing Websites - available at https://www.openml.org/d/4534
+This assignment is to implement and analyze 5 different classification algorithms for two datasets<br>
+The datasets used are: Phishing Websites and Breast Cancer Wisconsin(Diagnostic)<br>
+The classification algorithms are: Decision Tree, kNN, Neural Network, SVM and Boosting.<br>
 
-Dataset 2: Census Income - http://archive.ics.uci.edu/ml/datasets/Census+Income
+Datasets:
+Breast Cancer Wisconsin (Diagnostic)  -> https://archive.ics.uci.edu/ml/datasets/Breast+Cancer+Wisconsin+(Diagnostic) <br>
+                                                  -> https://archive.ics.uci.edu/ml/machine-learning-databases/breast-cancer-wisconsin/wdbc.data <br>
+Phishing Websites -> https://www.openml.org/d/4534 <br>
+<br>
+<br>
+Python Version: Python 2.7.15<br>
+Packages used: scikit-learn, numpy, pandas, matplotlib, itertools, timeit<br>
 
-Getting Started & Prerequisites
-For testing on your own machine, you need only to install python 3.6 and the following packages:
+Instructions to run the code:<br>
+1. Work on the iPython notebook using Jupyter<br>
+2. Run the python script.<br>
 
-pandas, numpy, scikit-learn, matplotlib, itertools, timeit
-Running the Classifiers
-Optimal Way: Work with the iPython notebook (.ipnyb) using Jupyter or a similar environment. This allows you to "Run All" or you can run only the classifiers that you are interested in.
-
-Second Best Option: Run the python script (.py) after first editing the location where you have the two datasets saved on your local machine.
-
-Final Option (view only): Feel free to open up the (.html) file to see a sample output of all of the algorithms for both datasets.
+Before testing the code please make sure to install the necessary packages. Also make sure that the code and datasets are in the same folder.<br>
